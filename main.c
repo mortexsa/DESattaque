@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-char* itoa(long int value, char* result, int base) {
+char* itoa(long value, char* result, int base) {
 		// check that the base if valid
 		if (base < 2 || base > 36) { *result = '\0'; return result; }
 
@@ -16,7 +16,7 @@ char* itoa(long int value, char* result, int base) {
 		} while ( value );
 
 		// Apply negative sign
-		if (tmp_value < 0) *ptr++ = '-';
+		//if (tmp_value < 0) *ptr++ = '-';
 		*ptr-- = '\0';
 		while(ptr1 < ptr) {
 			tmp_char = *ptr;
@@ -73,6 +73,18 @@ void expansion(int *tabResultant,const int *tabExpansion,int *tabAvantExpansion)
 	Permutation(tabResultant,tabExpansion,tabAvantExpansion,48);
 }
 
+void xor(int *tabResult, int *premierK, int *deuxiemeK, int nbrBit){
+	for(int i=0;i<nbrBit;i++){
+		tabResult[i] = premierK[i] ^ deuxiemeK[i];
+	}
+}
+
+void longToBin(int *tabResult, long hexa, int nbrBit){
+	char str[80]={0};
+	itoa(hexa,str,2);
+	strToIntBin(tabResult,str,nbrBit);
+}
+
 int main(){
 
 	const int ip[65] = {
@@ -97,35 +109,58 @@ int main(){
 		28,29,30,31,32,1
 	};
 
-	long claire = 0x40A7D989161A6223;
-	printf("%ld\n", claire);
-	char i[80]={0};
-	itoa(claire,i,2);
+	long claire = 0x864C804BB6B905BA;
+	printf("%lx\n", claire);
 	int b[65];
-	strToIntBin(b,i,64);
+	longToBin(b,claire,64);
 	for(int j=0;j<64;j++){
 		printf("%d", b[j]);
 	}
 	printf("\n");
-
-	int rightTab[33] = {0};
-	int leftTab[33] = {0};
-	split32bit(b,leftTab,rightTab);
-	for(int j=0;j<32;j++){
-		printf("%d",leftTab[j]);
-	}
-	printf("\n\n avant expension\n");
-	for(int j=0;j<32;j++){
-		printf("%d",rightTab[j]);
+	
+	long claire2 = 0x8448800BB6B805BE;
+	printf("%lx\n", claire2);
+	int b2[65];
+	longToBin(b2,claire2,64);
+	for(int j=0;j<64;j++){
+		printf("%d", b2[j]);
 	}
 	printf("\n\n\n");
-
+	Permutation(b,ip, b,64);
+	Permutation(b2,ip, b2,64);
+	int rightTab1[33] = {0};
+	int leftTab1[33] = {0};
+	split32bit(b,leftTab1,rightTab1);
+	for(int j=0;j<32;j++){
+		printf("%d",rightTab1[j]);
+	}
+	printf("\n");
+	int rightTab2[33] = {0};
+	int leftTab2[33] = {0};
+	split32bit(b2,leftTab2,rightTab2);
+	for(int j=0;j<32;j++){
+		printf("%d",rightTab2[j]);
+	}
+	printf("\n");
+	int resultExpXor[33] = {0};
+	xor(resultExpXor,rightTab1, rightTab2,32);
+	for(int j=0;j<32;j++){
+		printf("%d",resultExpXor[j]);
+	}
+	printf("\n");
 	printf("expension !!!!! \n\n");
 
-	int resultExp[49] = {0};
-	expansion(resultExp,e,rightTab);
+	int resultExpRight[49] = {0};
+	int resultExpRight2[49] = {0};
+	
+	expansion(resultExpRight,e,rightTab1);
+	expansion(resultExpRight2,e,rightTab2);
 	for(int j=0;j<48;j++){
-		printf("%d",resultExp[j]);
+		printf("%d",resultExpRight[j]);
+	}
+	printf("\n");
+	for(int j=0;j<48;j++){
+		printf("%d",resultExpRight2[j]);
 	}
 	printf("\n");
 
