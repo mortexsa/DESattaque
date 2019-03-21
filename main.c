@@ -2,37 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-char* itoa(long value, char* result, int base) {
-		// check that the base if valid
-		if (base < 2 || base > 36) { *result = '\0'; return result; }
+void hexatobinary(int *tabResult, long hexa, int nbrBit){
+	long tmp = hexa;
+	int entier;
+	int compteur = nbrBit*4-1;
+	for(int j=0;j<nbrBit;j++){
+		entier = tmp & 0xF;
+		for(int i=0;i<4;i++){
 
-		char* ptr = result, *ptr1 = result, tmp_char;
-		long tmp_value;
-
-		do {
-			tmp_value = value;
-			value /= base;
-			*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
-		} while ( value );
-
-		// Apply negative sign
-		//if (tmp_value < 0) *ptr++ = '-';
-		*ptr-- = '\0';
-		while(ptr1 < ptr) {
-			tmp_char = *ptr;
-			*ptr--= *ptr1;
-			*ptr1++ = tmp_char;
+			tabResult[compteur] = entier % 2;
+			entier = entier / 2;
+			compteur--;
 		}
-		return result;
+		tmp = tmp >> 4;
 	}
 
-void strToIntBin(int *tab,char *string,int nbrBit){	
-	int b = nbrBit-strlen(string);
-	for(int j=0;j<nbrBit;j++)
-		tab[j] = 0;
-	for(int i=b;i<nbrBit;i++){
-		tab[i] = string[i-b]-48;
-	}
 }
 
 long puissance(int a,int b){
@@ -79,10 +63,15 @@ void xor(int *tabResult, int *premierK, int *deuxiemeK, int nbrBit){
 	}
 }
 
-void longToBin(int *tabResult, long hexa, int nbrBit){
-	char str[80]={0};
-	itoa(hexa,str,2);
-	strToIntBin(tabResult,str,nbrBit);
+int bitFauter(int *tabJuste, int *tabFaux) {
+	int tabxor[33] = {0};
+	xor(tabxor, tabJuste, tabFaux, 32);
+	for(int j=0;j<32;j++){
+		if(tabxor[j] == 1){
+			return j;
+		}
+	}
+	return -1;
 }
 
 int main(){
@@ -109,68 +98,63 @@ int main(){
 		28,29,30,31,32,1
 	};
 
-	long claire = 0x864C804BB6B905BA;
-	printf("%lx\n", claire);
-	int b[65];
-	longToBin(b,claire,64);
-	for(int j=0;j<64;j++){
-		printf("%d", b[j]);
+	const int pMois1[33] = {
+		9,17,23,31,
+		13,28,2,18,
+		24,16,30,6,
+		26,20,10,1,
+		8,14,25,3,
+		4,29,11,19,
+		32,12,22,7,
+		5,27,15,21
+	};
+
+	const int sbox1[4][16] = {
+		{14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7},
+		{0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8},
+		{4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0},
+		{15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13}
+	};
+
+
+	int tab1[64] = {0};
+	int tab2[64] = {0};
+	int tab1P[64] = {0};
+	int tab2P[64] = {0};
+	long chiffrer = 0x864C804BB6B905BA;
+	hexatobinary(tab1,chiffrer,16);
+	Permutation(tab1P, ip, tab1, 64);
+	chiffrer = 0x864D804BB6B985BE;
+	hexatobinary(tab2,chiffrer,16);
+	Permutation(tab2P, ip, tab2, 64);
+	
+	int tabright1[33] = {0};
+	int tabright2[33] = {0};
+	int tableft1[33] = {0};
+	int tableft2[33] = {0};
+	split32bit(tab1P,tableft1,tabright1);
+	split32bit(tab2P,tableft2,tabright2);
+	int bitfaux = bitFauter(tabright1,tabright2);
+
+	int tabExp1[49] = {0};
+	int tabExp2[49] = {0};
+	expansion(tabExp1,e,tabright1);
+	expansion(tabExp2,e,tabright2);
+
+	//p - 1 pour le left tableau just 
+	int tabPmoin1[33] = {0};
+	Permutation(tabPmoin1,pMois1, tableft1, 32);
+	for(int i=0;i<32;i++){
+		printf("%d", tableft1[i]);
+	}
+	printf("\n");
+	for(int i=0;i<32;i++){
+		printf("%d", tabPmoin1[i]);
 	}
 	printf("\n");
 	
-	long claire2 = 0x8448800BB6B805BE;
-	printf("%lx\n", claire2);
-	int b2[65];
-	longToBin(b2,claire2,64);
-	for(int j=0;j<64;j++){
-		printf("%d", b2[j]);
-	}
-	printf("\n\n\n");
-	Permutation(b,ip, b,64);
-	Permutation(b2,ip, b2,64);
-	int rightTab1[33] = {0};
-	int leftTab1[33] = {0};
-	split32bit(b,leftTab1,rightTab1);
-	for(int j=0;j<32;j++){
-		printf("%d",rightTab1[j]);
-	}
-	printf("\n");
-	int rightTab2[33] = {0};
-	int leftTab2[33] = {0};
-	split32bit(b2,leftTab2,rightTab2);
-	for(int j=0;j<32;j++){
-		printf("%d",rightTab2[j]);
-	}
-	printf("\n");
-	int resultExpXor[33] = {0};
-	xor(resultExpXor,rightTab1, rightTab2,32);
-	for(int j=0;j<32;j++){
-		printf("%d",resultExpXor[j]);
-	}
-	printf("\n");
-	printf("expension !!!!! \n\n");
-
-	int resultExpRight[49] = {0};
-	int resultExpRight2[49] = {0};
 	
-	expansion(resultExpRight,e,rightTab1);
-	expansion(resultExpRight2,e,rightTab2);
-	for(int j=0;j<48;j++){
-		printf("%d",resultExpRight[j]);
-	}
-	printf("\n");
-	for(int j=0;j<48;j++){
-		printf("%d",resultExpRight2[j]);
-	}
-	printf("\n");
 
-
-	// int permut[65] = {0};
-	// Permutation(permut,ip,b,64);
-	// for(int j=0;j<64;j++){
-	// 	printf("%d",permut[j]);
-	// }
-	// printf("\n");
 
 
 	return 0;
