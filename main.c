@@ -2,11 +2,146 @@
 #include <stdlib.h>
 #include <string.h>
 
-void hexatobinary(int *tabResult, long hexa, int nbrBit){
+typedef struct message {
+	long chiffrerHexa;
+	int chiffrerBinaire[64];
+	int chiffrerBinairePermuter[64];
+	int leftChiffrer[32];
+	int rightChiffrer[32];
+	int rightChiffrerExp[48];
+	int sbox6Bits[6];
+	int sbox6BitsXorer[6];
+	int sbox4Bits[4]; 
+} Message;
+
+static const int ip[64] = {
+	58,50,42,34,26,18,10,2,
+	60,52,44,36,28,20,12,4,
+	62,54,46,38,30,22,14,6,
+	64,56,48,40,32,24,16,8,
+	57,49,41,33,25,17,9,1,
+	59,51,43,35,27,19,11,3,
+	61,53,45,37,29,21,13,5,
+	63,55,47,39,31,23,15,7
+};
+
+static const int e[48] = {
+	32,1,2,3,4,5,
+	4,5,6,7,8,9,
+	8,9,10,11,12,13,
+	12,13,14,15,16,17,
+	16,17,18,19,20,21,
+	20,21,22,23,24,25,
+	24,25,26,27,28,29,
+	28,29,30,31,32,1
+};
+
+static const int pMois1[32] = {
+	9,17,23,31,
+	13,28,2,18,
+	24,16,30,6,
+	26,20,10,1,
+	8,14,25,3,
+	4,29,11,19,
+	32,12,22,7,
+	5,27,15,21
+};
+
+static const int sbox[8][4][16] = {
+	{
+		{14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7},
+		{0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8},
+		{4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0},
+		{15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13}
+	},
+	{
+		{15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10},
+		{3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5},
+		{0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15},
+		{13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9}
+	},
+	{
+		{10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8},
+		{13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1},
+		{13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7},
+		{1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12}
+	},
+	{
+		{7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15},
+		{13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9},
+		{10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4},
+		{3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14}
+	},
+	{
+		{2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9},
+		{14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6},
+		{4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14},
+		{11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3}
+	},
+	{
+		{12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11},
+		{10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8},
+		{9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6},
+		{4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13}
+	},
+	{
+		{4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1},
+		{13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6},
+		{1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2},
+		{6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12}
+	},
+	{
+		{13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7},
+		{1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2},
+		{7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8},
+		{2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11}
+	}
+};
+
+static const long messageClaire = 0x40A7D989161A6223;
+
+static const long chiffrerJuste = 0x864C804BB6B905BA;
+
+static const long chiffrerFaux[32] = {
+	0x8448800BB6B805BE, 
+	0x865E804BB6B805BA, 
+	0x864C824FB6B805BA, 
+	0x861C8409A6B905BA, 
+	0x860C804FA4B805BA, 
+	0x860C844BB6BB05BA, 
+	0x870C844BA6B907BA, 
+	0x864C844AE6B905B8, 
+	0x8F0C804AA6AD05BA, 
+	0x8644804AF6AD05BA, 
+	0x864C884BF6A905BA, 
+	0xC64C9042F6A905BA, 
+	0xC64C804AFEAD05BB, 
+	0xC64C804BB6F105BA, 
+	0x864C804BB6F90DBB, 
+	0xC64C904BB6B904F3, 
+	0xE64C804BB2B904FB, 
+	0x866C804BB2B915FA, 
+	0x864CA04BB6B914BA, 
+	0x964CC16BB2B915BA, 
+	0x824CC04B96B914FA, 
+	0x924C814BB69905BA, 
+	0x864CC14BB6B925BA, 
+	0x964CC15BB6B9459A, 
+	0x024CC05BB7B905BA, 
+	0x86CC804BB7B901BA, 
+	0x864C005BB6B945BA, 
+	0x864880DBB7B901AA, 
+	0x8648804B37B901AA, 
+	0x8648804BB63905AE, 
+	0x864D804BB6B985BE, 
+	0x864C800BB6B8052E 
+};
+
+void hexatobinary(int *tabResult, long hexa, int nbrHexa){
 	long tmp = hexa;
 	int entier;
-	int compteur = nbrBit*4-1;
-	for(int j=0;j<nbrBit;j++){
+	int compteur = nbrHexa*4-1;
+	for(int j=0;j<nbrHexa;j++){
 		entier = tmp & 0xF;
 		for(int i=0;i<4;i++){
 
@@ -19,6 +154,14 @@ void hexatobinary(int *tabResult, long hexa, int nbrBit){
 
 }
 
+void decimaltobinary(int *tabResult, int decimal, int nbrBit){
+	int entier = decimal;
+	for(int i=nbrBit-1; i>=0; i--){
+		tabResult[i] = entier % 2;
+		entier = entier /2;
+	}
+}
+
 long puissance(int a,int b){
 	if(b == 0){
 		return 1;
@@ -27,8 +170,8 @@ long puissance(int a,int b){
 	}
 }
 
-long TabtoLong(int *tab,int nbrBit){	
-	long nombre=0;
+int TabtoInt(int *tab,int nbrBit){	
+	int nombre=0;
 	int i=0,j=nbrBit-1;
 	while(j>=0){
 		if(tab[j] != 0){
@@ -40,9 +183,15 @@ long TabtoLong(int *tab,int nbrBit){
 	return nombre;
 }
 
-void Permutation(int *resultat,const int *tableDePermutation, int *aPermuter, int nbrBit){
+void Permutation(int *resultat,int *aPermuter, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
-		resultat[i] = aPermuter[tableDePermutation[i]-1];
+		resultat[i] = aPermuter[ip[i]-1];
+	}
+}
+
+void PermutationMoin1(int *resultat,int *aPermuter, int nbrBit){
+	for(int i=0;i<nbrBit;i++){
+		resultat[i] = aPermuter[pMois1[i]-1];
 	}
 }
 
@@ -53,8 +202,10 @@ void split32bit(int *completTab,int *leftTab,int *rightTab){
 	}
 }
 
-void expansion(int *tabResultant,const int *tabExpansion,int *tabAvantExpansion){
-	Permutation(tabResultant,tabExpansion,tabAvantExpansion,48);
+void expansion(int *tabResultant,int *tabAvantExpansion){
+	for(int i=0;i<48;i++){
+		tabResultant[i] = tabAvantExpansion[e[i]-1];
+	}
 }
 
 void xor(int *tabResult, int *premierK, int *deuxiemeK, int nbrBit){
@@ -74,88 +225,97 @@ int bitFauter(int *tabJuste, int *tabFaux) {
 	return -1;
 }
 
+void SboxFonction(Message *m, int numSbox){
+
+	int row = 0;
+	int column = 0;
+	row = m->sbox6BitsXorer[0]*2+m->sbox6BitsXorer[5];
+	int i=0,j=4;
+	while(j>0){
+		if(m->sbox6BitsXorer[j] != 0){
+			column += puissance(2,i);
+		}
+		i++;
+		j--;
+	}
+	long resultat4bit = sbox[numSbox][row][column];
+	hexatobinary(m->sbox4Bits, resultat4bit,1);
+}
+
+void obtenirR16L16(long hexa,Message *m){
+	m->chiffrerHexa = hexa;
+	hexatobinary(m->chiffrerBinaire,hexa,16);
+	Permutation(m->chiffrerBinairePermuter, m->chiffrerBinaire, 64);
+	split32bit(m->chiffrerBinairePermuter,m->leftChiffrer,m->rightChiffrer);
+	
+}
+
+void extraire6Bits(Message *m, int position) {
+	for(int i=0; i<6; i++) {
+		m->sbox6Bits[i] = m->rightChiffrerExp[6*position+i];
+	}
+}
+
+int egale(int *tab1, int *tab2, int nbrBit){
+	for(int i=0; i<nbrBit; i++){
+		if(tab1[i] != tab2[i])
+			return 0;
+	}
+	return 1;
+}
+
+void rechercheExostive(int resultat[][64]){
+	Message juste;
+	Message faux;
+	obtenirR16L16(chiffrerJuste,&juste);
+	int leftPmoin1[32] = {0};
+	PermutationMoin1(leftPmoin1, juste.leftChiffrer, 32);
+	for(int w=0;w<32;w++){
+		obtenirR16L16(chiffrerFaux[w],&faux);
+		int bitfaux = bitFauter(juste.rightChiffrer,faux.rightChiffrer);
+		printf("bit faux : %d\n", bitfaux);
+		expansion(juste.rightChiffrerExp,juste.rightChiffrer);
+		expansion(faux.rightChiffrerExp,faux.rightChiffrer);
+		int resSbox[4] = {0};
+		int key[6] = {0};
+		for(int i=0; i<48; i++){
+			if(e[i] == (bitfaux+1)){
+				printf("jai trouver : %d\n", i/6);
+				extraire6Bits(&juste,i/6);
+				extraire6Bits(&faux,i/6);
+				for(int j=0; j<64; j++){
+					decimaltobinary(key,j,6);
+					xor(juste.sbox6BitsXorer,juste.sbox6Bits,key,6);
+					xor(faux.sbox6BitsXorer,faux.sbox6Bits,key,6);
+					
+					SboxFonction(&juste,i/6);
+					SboxFonction(&faux,i/6);
+					xor(resSbox,juste.sbox4Bits,faux.sbox4Bits,4);
+					
+					if(egale(leftPmoin1,resSbox,4)) {
+						resultat[i/6][TabtoInt(key,6)]++;
+					}
+				}
+				
+			}
+		}
+	}
+	
+	
+}
+
 int main(){
 
-	const int ip[65] = {
-		58,50,42,34,26,18,10,2,
-		60,52,44,36,28,20,12,4,
-		62,54,46,38,30,22,14,6,
-		64,56,48,40,32,24,16,8,
-		57,49,41,33,25,17,9,1,
-		59,51,43,35,27,19,11,3,
-		61,53,45,37,29,21,13,5,
-		63,55,47,39,31,23,15,7
-	};
+	int resultat[8][64] = {0};
+	rechercheExostive(resultat);
 
-	const int e[49] = {
-		32,1,2,3,4,5,
-		4,5,6,7,8,9,
-		8,9,10,11,12,13,
-		12,13,14,15,16,17,
-		16,17,18,19,20,21,
-		20,21,22,23,24,25,
-		24,25,26,27,28,29,
-		28,29,30,31,32,1
-	};
-
-	const int pMois1[33] = {
-		9,17,23,31,
-		13,28,2,18,
-		24,16,30,6,
-		26,20,10,1,
-		8,14,25,3,
-		4,29,11,19,
-		32,12,22,7,
-		5,27,15,21
-	};
-
-	const int sbox1[4][16] = {
-		{14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7},
-		{0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8},
-		{4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0},
-		{15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13}
-	};
-
-
-	int tab1[64] = {0};
-	int tab2[64] = {0};
-	int tab1P[64] = {0};
-	int tab2P[64] = {0};
-	long chiffrer = 0x864C804BB6B905BA;
-	hexatobinary(tab1,chiffrer,16);
-	Permutation(tab1P, ip, tab1, 64);
-	chiffrer = 0x864D804BB6B985BE;
-	hexatobinary(tab2,chiffrer,16);
-	Permutation(tab2P, ip, tab2, 64);
-	
-	int tabright1[33] = {0};
-	int tabright2[33] = {0};
-	int tableft1[33] = {0};
-	int tableft2[33] = {0};
-	split32bit(tab1P,tableft1,tabright1);
-	split32bit(tab2P,tableft2,tabright2);
-	int bitfaux = bitFauter(tabright1,tabright2);
-
-	int tabExp1[49] = {0};
-	int tabExp2[49] = {0};
-	expansion(tabExp1,e,tabright1);
-	expansion(tabExp2,e,tabright2);
-
-	//p - 1 pour le left tableau just 
-	int tabPmoin1[33] = {0};
-	Permutation(tabPmoin1,pMois1, tableft1, 32);
-	for(int i=0;i<32;i++){
-		printf("%d", tableft1[i]);
+	for(int i=0;i<8;i++){
+		for(int j=0;j<64;j++) {
+			printf("%d ", resultat[i][j]);
+		}
+		printf("\n");
 	}
-	printf("\n");
-	for(int i=0;i<32;i++){
-		printf("%d", tabPmoin1[i]);
-	}
-	printf("\n");
+
 	
-	
-
-
-
 	return 0;
 }
