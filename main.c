@@ -14,6 +14,14 @@ typedef struct message {
 	int sbox4Bits[4]; 
 } Message;
 
+typedef struct clef {
+	long k16;
+	int key48bit[48];
+	int key56bit[56];
+	int key64bitb[64];
+	int key8bit[8];
+} Key;
+
 static const int ip[64] = {
 	58,50,42,34,26,18,10,2,
 	60,52,44,36,28,20,12,4,
@@ -98,47 +106,53 @@ static const int sbox[8][4][16] = {
 	}
 };
 
+static const int pc1[56] = {
+	57,49,41,33,25,17,9,
+	1,58,50,42,34,26,18,
+	10,2,59,51,43,35,27,
+	19,11,3,60,52,44,36,
+	63,55,47,39,31,23,15,
+	7,62,54,46,38,30,22,
+	14,6,61,53,45,37,29,
+	21,13,5,28,20,12,4
+};
+
+static const int pc1Moin1[64] = {
+	8,16,24,56,52,44,36,0,
+	7,15,23,55,51,43,35,0,	
+	6,14,22,54,50,42,34,0,
+	5,13,21,53,49,41,33,0,	
+	4,12,20,28,48,40,32,0,	
+	3,11,19,27,47,39,31,0,
+	2,10,18,26,46,38,30,0,	
+	1,9,17,25,45,37,29,0
+};
+
+static const int pc2[48] = {
+	14,17,11,24,1,5,
+	3,28,15,6,21,10,
+	23,19,12,4,26,8,
+	16,7,27,20,13,2,
+	41,52,31,37,47,55,
+	30,40,51,45,33,48,
+	44,49,39,56,34,53,
+	46,42,50,36,29,32
+};
+
+//Les bits 9, 18, 22, 25, 35, 38, 43 et 54 sont perdus, ils sont donc mis à 0 dans cette table
+static const int pc2Moin1[56] = {
+	5,24,7,16,6,10,20,	
+	18,0,12,3,15,23,1,
+	9,19,2,0,14,22,11,	
+	0,13,4,0,17,21,8,
+	47,31,27,48,35,41,0,
+	46,28,0,39,32,25,44,
+	0,37,34,43,29,36,38,	
+	45,33,26,42,0,30,40
+};
+
 static const long messageClaire = 0x40A7D989161A6223;
 
-// static const long chiffrerJuste = 0xF3C23DEEF7FE5DCB;
-
-// static const long chiffrerFaux[32] = {
-// 	0xF1D73DEAF7FE5DDF, 
-// 	0xF3D03DEEF7FF5DCB, 
-// 	0xF3C23FAEF7FF5DCB, 
-// 	0xF28239A8E7FF5DCB, 
-// 	0xF3923DEAE5FE5DCB, 
-// 	0xF2823DEEF7FC5DCB, 
-// 	0xF38239EEE7FE5FCB, 
-// 	0xF28239EEB7FA5DC9, 
-// 	0xFA8239EFA7EA5DCB, 
-// 	0xF3CA3DEEB7EA5DCB, 
-// 	0xF3C235EFF7EE5DCB, 
-// 	0xF3C22DE7F7BA5DCB, 
-// 	0xF3C22DEEBFEA5DCA, 
-// 	0xB3C22DEEF7B65DCA, 
-// 	0xF3C22DEEF7BE55CB, 
-// 	0xF3C22DEEF3BE5D82, 
-// 	0x93C22DEEF3BE5D8B, 
-// 	0xF3E23DEEF3FE5C8B, 
-// 	0xF3C21DEEF3FE4D8B, 
-// 	0xE3C27CCEF3FE4C8B, 
-// 	0xF3C27CEED3FE4D8B, 
-// 	0xE7C27CEEF7DE5DCB, 
-// 	0xF7C27DEEF7FE7DCB, 
-// 	0xE3C27CEEF6FE1DEB, 
-// 	0x63C27DEEF6FE19CB, 
-// 	0xF3423DFEF6FE5DCB, 
-// 	0xF3C2BDEEF6FE59CB, 
-// 	0xF3C63D7EF7FE19DF, 
-// 	0xF3C73DFE76FE5DDF, 
-// 	0xF3C73DEEF77E5DCF, 
-// 	0xF3C63DEEF7FEDDDF, 
-// 	0xF3D63DAAF7FF5D5B 
-// };
-
-
-//arezki
 static const long chiffrerJuste = 0x864C804BB6B905BA;
 
 static const long chiffrerFaux[32] = {
@@ -316,9 +330,32 @@ int egale(int *tab1, int *tab2, int nbrBit){
 	return 1;
 }
 
-void rechercheExostive(int resultat[][64],const long LechiffrerJuste, const long *LeschiffrerFaux){
+
+long k16enHexa(int tabK16[8][64]){
+	long resultat = 0;
+	int tab[8] = {0};
+	int tabclef[6] = {0};
+	int tabresult[64] = {0};
+	for(int i=0; i<8; i++){
+		for(int j=0;j<64;j++){
+			if(tabK16[i][j] == 6)
+				tab[i] = j;
+		}
+		printf("%d\n", tab[i]);
+		decimaltobinary(tabclef, tab[i], 6);
+		for(int j=0; j<6;j++){
+			tabresult[i*6+j] = tabclef[j];
+		}
+	}
+	resultat = TabtoLong(tabresult,48);
+	return resultat;
+}
+
+long rechercheExostive(const long LechiffrerJuste, const long *LeschiffrerFaux){
 	Message juste;
 	Message faux;
+	long aRetourner = 0;
+	int resultat[8][64] = {0};
 	obtenirR16L16(LechiffrerJuste,&juste);
 	int leftPmoin1[32] = {0};
 	int resultatxorLeft[32] = {0};
@@ -425,37 +462,53 @@ void rechercheExostive(int resultat[][64],const long LechiffrerJuste, const long
 			}
 		}
 	}
-	
-	
+
+	aRetourner = k16enHexa(resultat);
+	return aRetourner;
 }
 
-long k16enHexa(int tabK16[8][64]){
-	long resultat = 0;
-	int tab[8] = {0};
-	int tabclef[6] = {0};
-	int tabresult[64] = {0};
-	for(int i=0; i<8; i++){
-		for(int j=0;j<64;j++){
-			if(tabK16[i][j] == 6)
-				tab[i] = j;
-		}
-		printf("%d\n", tab[i]);
-		decimaltobinary(tabclef, tab[i], 6);
-		for(int j=0; j<6;j++){
-			tabresult[i*6+j] = tabclef[j];
-		}
+void initTab(int *tab, int nbrBit){
+	for(int i=0;i<nbrBit;i++){
+		tab[i] = 0;
 	}
-	resultat = TabtoLong(tabresult,64);
-	resultat = resultat >> 16;
-	resultat = resultat & 0x0000FFFFFFFFFFFF;
-	return resultat;
+}
+
+void expansionClef(int *resultat, int *key48b, const int *fctExtansion, int nbrBit){
+	for(int i=0;i<nbrBit;i++){
+		if(fctExtansion[i] != 0){
+			resultat[i] = key48b[fctExtansion[i]-1];
+		}	
+	}
+}
+
+void getK64bit(long k16){
+	Key k;
+	k.k16 = k16;
+	initTab(k.key48bit,48);
+	initTab(k.key56bit,56);
+	initTab(k.key64bitb,64);
+	hexatobinary(k.key48bit,k16,12);
+	expansionClef(k.key56bit, k.key48bit, pc2Moin1, 56);
+	expansionClef(k.key64bitb, k.key56bit, pc1Moin1, 64);
+	int position8bit[8] = {14,15,19,20,51,54,58,60};
+	for(int i=0;i<256;i++) {
+		decimaltobinary(k.key8bit,i,8);
+		for(int j=0;j<8;j++){
+			k.key64bitb[position8bit[j]-1] = k.key8bit[j];
+		}
+		printf("%d : ", i);
+		for(int j=0;j<64;j++){
+			printf("%d",k.key64bitb[j]);
+		}
+		printf("\n");
+	}
 }
 
 int main(){
 // 
-	int resultat[8][64] = {0};
-	rechercheExostive(resultat,chiffrerJuste,chiffrerFaux);
-	printf("la fin des temps : %lx\n", k16enHexa(resultat)); 
+	long onEstLa = rechercheExostive(chiffrerJuste,chiffrerFaux);
+	printf("la fin des temps : %lx\n", onEstLa); 
+	getK64bit(onEstLa);
 	
 
 	
