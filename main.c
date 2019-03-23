@@ -599,7 +599,7 @@ long fonctionDES(long claire, long k64){
 	return TabtoLong(d.chiffrerBinaire,64);
 }
 
-long getK64bit(long claire, long chiffrer, long k16){
+long getK56bit(long claire, long chiffrer, long k16){
 	Key k;
 	initTab(k.key48bit,48);
 	initTab(k.key56bit,56);
@@ -618,28 +618,51 @@ long getK64bit(long claire, long chiffrer, long k16){
 		if(chiffrer == fonctionDES(claire,clef)){
 			return clef;
 		}
-		// printf("%d : ", i);
-		// for(int j=0;j<64;j++){
-		// 	printf("%d",k.key64bitb[j]);
-		// }
-		// printf("\n");
 		i++;
 	}
 	return 0;
 }
 
+long getK64bitParite(long claire, long chiffrer, long k16){
+	int compteur = 0;
+	int tabClefB[64] = {0};
+	hexatobinary(tabClefB, getK56bit(claire, chiffrer, k16), 16);
+	for(int i=0; i<64;i++){
+		printf("%d", tabClefB[i]);
+		if((i+1)%8 == 0)
+			printf(" ");
+	}
+	printf("\n");
+	for(int i=1; i<65; i++) {
+		if((i%8) == 0) {
+			if(compteur%2 == 1){
+				tabClefB[i-1] = 0;
+			}else {
+				tabClefB[i-1] = 1;
+			}
+			compteur = 0;
+		}else {
+			compteur += tabClefB[i-1];
+		}
+	}
+	for(int i=0; i<64;i++){
+		printf("%d", tabClefB[i]);
+		if((i+1)%8 == 0)
+			printf(" ");
+	}
+	printf("\n");
+	return TabtoLong(tabClefB,64);
+}
+
+
 
 
 int main(){
-// 
-// 	messageClaire = 0x40A7D989161A6223;
-
-// static const long chiffrerJuste = 0x864C804BB6B905BA;
 
 	long onEstLa = rechercheExostive(chiffrerJuste,chiffrerFaux);
 	printf("la fin des temps : %lx\n", onEstLa); 
 	
-	printf("Des : %lx\n", getK64bit(messageClaire, chiffrerJuste, onEstLa));
+	printf("Clef : %lx\n", getK64bitParite(messageClaire, chiffrerJuste, onEstLa));
 	
 	
 	
