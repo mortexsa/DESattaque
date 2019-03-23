@@ -27,8 +27,11 @@ typedef struct des {
 	int claireBinaireIp[64];
 	int right32Bit[32];
 	int left32Bit[32];
+	int right32BitPlus1[32];
+	int left32BitPlus1[32];
 	int right48Bit[48];
 	int subKey[16][48];
+	int chiffrerBinaire[64];
 } DES;
 
 static const int ip[64] = {
@@ -40,6 +43,17 @@ static const int ip[64] = {
 	59,51,43,35,27,19,11,3,
 	61,53,45,37,29,21,13,5,
 	63,55,47,39,31,23,15,7
+};
+
+static const int ipMoin1[64] = {
+	40,8,48,16,56,24,64,32,
+	39,7,47,15,55,23,63,31,
+	38,6,46,14,54,22,62,30,
+	37,5,45,13,53,21,61,29,
+	36,4,44,12,52,20,60,28,
+	35,3,43,11,51,19,59,27,
+	34,2,42,10,50,18,58,26,
+	33,1,41,9,49,17,57,25
 };
 
 static const int e[48] = {
@@ -558,16 +572,34 @@ void f(int *resultat, int *Ri, int *Ki){
 	Permutation(resultat, sorti32bit, p, 32);
 }
 
+void copieTab(int *resultat, int * aCopier, int nbrBit){
+	for(int i=0; i<nbrBit; i++){
+		resultat[i] = aCopier[i];
+	}
+}
+
 long fonctionDES(long claire, long k64){
 	DES d;
+	int resultatF[32] = {0};
+	int resultatConcat[64] = {0};
 	hexatobinary(d.claireBinaire, claire, 16);
 	hexatobinary(d.key64Bit, k64, 16);
 	Permutation(d.claireBinaireIp, d.claireBinaire, ip, 64);
 	splitTab(d.claireBinaireIp, d.left32Bit, d.right32Bit, 32);
 	generationSubKey(d.subKey, d.key64Bit);
+	for(int i=0; i<16; i++){
+		copieTab(d.left32BitPlus1, d.right32Bit, 32);
+		f(resultatF, d.right32Bit, d.subKey[i]);
+		xor(d.right32BitPlus1, d.left32Bit, resultatF, 32);
+		copieTab(d.left32Bit, d.left32BitPlus1, 32);
+		copieTab(d.right32Bit, d.right32BitPlus1, 32);
+	}
+	fusionTab(resultatConcat, d.right32Bit, d.left32Bit, 32);
+	Permutation(d.chiffrerBinaire, resultatConcat, ipMoin1, 64);
+	return TabtoLong(d.chiffrerBinaire,64);
 }
 
-void getK64bit(long k16){
+long getK64bit(long claire, long chiffrer, long k16){
 	Key k;
 	initTab(k.key48bit,48);
 	initTab(k.key56bit,56);
@@ -576,27 +608,40 @@ void getK64bit(long k16){
 	Permutation(k.key56bit, k.key48bit, pc2Moin1, 56);
 	Permutation(k.key64bitb, k.key56bit, pc1Moin1, 64);
 	int position8bit[8] = {14,15,19,20,51,54,58,60};
-	for(int i=0;i<256;i++) {
+	int i=0;
+	while(i<256) {
 		decimaltobinary(k.key8bit,i,8);
 		for(int j=0;j<8;j++){
 			k.key64bitb[position8bit[j]-1] = k.key8bit[j];
+		}
+		long clef = TabtoLong(k.key64bitb,64);
+		if(chiffrer == fonctionDES(claire,clef)){
+			return clef;
 		}
 		// printf("%d : ", i);
 		// for(int j=0;j<64;j++){
 		// 	printf("%d",k.key64bitb[j]);
 		// }
 		// printf("\n");
+		i++;
 	}
+	return 0;
 }
 
 
 
 int main(){
 // 
+// 	messageClaire = 0x40A7D989161A6223;
+
+// static const long chiffrerJuste = 0x864C804BB6B905BA;
+
 	long onEstLa = rechercheExostive(chiffrerJuste,chiffrerFaux);
 	printf("la fin des temps : %lx\n", onEstLa); 
-	getK64bit(onEstLa);
-
+	
+	printf("Des : %lx\n", getK64bit(messageClaire, chiffrerJuste, onEstLa));
+	
+	
 	
 	return 0;
 }
