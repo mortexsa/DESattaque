@@ -22,11 +22,13 @@ typedef struct clef {
 } Key;
 
 typedef struct des {
-	long claire;
-	long k64;
 	int claireBinaire[64];
+	int key64Bit[64];
 	int claireBinaireIp[64];
-
+	int right32Bit[32];
+	int left32Bit[32];
+	int right48Bit[48];
+	int subKey[16][48];
 } DES;
 
 static const int ip[64] = {
@@ -49,6 +51,13 @@ static const int e[48] = {
 	20,21,22,23,24,25,
 	24,25,26,27,28,29,
 	28,29,30,31,32,1
+};
+
+static const int p[32] = {
+	16,7,20,21,29,12,28,17,
+	1,15,23,26,5,18,31,10,
+	2,8,24,14,32,27,3,9,
+	19,13,30,6,22,11,4,25
 };
 
 static const int pMoin1[32] = {
@@ -265,10 +274,10 @@ void Permutation(int *resultat,int *aPermuter,const int *tablePermutation, int n
 
 
 
-void split32bit(int *completTab,int *leftTab,int *rightTab){
-	for(int i=0;i<32;i++){
+void splitTab(int *completTab,int *leftTab,int *rightTab, int nbrBit){
+	for(int i=0;i<nbrBit;i++){
 		leftTab[i] = completTab[i];
-		rightTab[i] = completTab[i+32];
+		rightTab[i] = completTab[i+nbrBit];
 	}
 }
 
@@ -308,11 +317,27 @@ void SboxFonction(Message *m, int numSbox){
 	hexatobinary(m->sbox4Bits, resultat4bit,1);
 }
 
+void Sboxfonc(int *resultat, int *entrer, int numSbox){
+	int row = 0;
+	int column = 0;
+	row = entrer[0]*2+entrer[5];
+	int i=0,j=4;
+	while(j>0){
+		if(entrer[j] != 0){
+			column += puissance(2,i);
+		}
+		i++;
+		j--;
+	}
+	long resultat4bit = sbox[numSbox][row][column];
+	hexatobinary(resultat, resultat4bit,1);
+}
+
 void obtenirR16L16(long hexa,Message *m){
 	m->chiffrerHexa = hexa;
 	hexatobinary(m->chiffrerBinaire,hexa,16);
 	Permutation(m->chiffrerBinairePermuter, m->chiffrerBinaire, ip, 64);
-	split32bit(m->chiffrerBinairePermuter,m->leftChiffrer,m->rightChiffrer);
+	splitTab(m->chiffrerBinairePermuter,m->leftChiffrer,m->rightChiffrer, 32);
 	
 }
 
@@ -379,84 +404,83 @@ long rechercheExostive(const long LechiffrerJuste, const long *LeschiffrerFaux){
 					resLeftJuste[y] = leftPmoin1[4*(i/6)+y];
 				}
 				for(int j=0; j<64; j++){
-					printf("jai trouver : %d\n", i/6);
-					printf("rightJuste : ");
-					for(int z=0;z<48;z++){
-						printf("%d", juste.rightChiffrerExp[z]);
-					}
-					printf("\n");
-					printf("rightFaux : ");
-					for(int z=0;z<48;z++){
-						printf("%d", faux.rightChiffrerExp[z]);
-					}
-					printf("\n");
-					printf("clef :     ");
+					// printf("jai trouver : %d\n", i/6);
+					// printf("rightJuste : ");
+					// for(int z=0;z<48;z++){
+					// 	printf("%d", juste.rightChiffrerExp[z]);
+					// }
+					// printf("\n");
+					// printf("rightFaux : ");
+					// for(int z=0;z<48;z++){
+					// 	printf("%d", faux.rightChiffrerExp[z]);
+					// }
+					// printf("\n");
+					// printf("clef :     ");
 					decimaltobinary(key,j,6);
-					for(int z=0;z<6;z++){
-						printf("%d", key[z]);
-					}
-					printf("\n");
+					// for(int z=0;z<6;z++){
+					// 	printf("%d", key[z]);
+					// }
+					// printf("\n");
 					xor(juste.sbox6BitsXorer,juste.sbox6Bits,key,6);
-					printf("juste :    ");
-					for(int z=0;z<6;z++){
-						printf("%d", juste.sbox6Bits[z]);
-					}
-					printf("\n");
-					printf("justeXor : ");
-					for(int z=0;z<6;z++){
-						printf("%d", juste.sbox6BitsXorer[z]);
-					}
-					printf("\n\n");
-					printf("clef :     ");
+					// printf("juste :    ");
+					// for(int z=0;z<6;z++){
+					// 	printf("%d", juste.sbox6Bits[z]);
+					// }
+					// printf("\n");
+					// printf("justeXor : ");
+					// for(int z=0;z<6;z++){
+					// 	printf("%d", juste.sbox6BitsXorer[z]);
+					// }
+					// printf("\n\n");
+					// printf("clef :     ");
 					decimaltobinary(key,j,6);
-					for(int z=0;z<6;z++){
-						printf("%d", key[z]);
-					}
-					printf("\n");
+					// for(int z=0;z<6;z++){
+					// 	printf("%d", key[z]);
+					// }
+					// printf("\n");
 					xor(faux.sbox6BitsXorer,faux.sbox6Bits,key,6);
-					printf("faux :     ");
-					for(int z=0;z<6;z++){
-						printf("%d", faux.sbox6Bits[z]);
-					}
-					printf("\n");
-					printf("fauxXor :  ");
-					for(int z=0;z<6;z++){
-						printf("%d", faux.sbox6BitsXorer[z]);
-					}
-					printf("\n\n");
+					// printf("faux :     ");
+					// for(int z=0;z<6;z++){
+					// 	printf("%d", faux.sbox6Bits[z]);
+					// }
+					// printf("\n");
+					// printf("fauxXor :  ");
+					// for(int z=0;z<6;z++){
+					// 	printf("%d", faux.sbox6BitsXorer[z]);
+					// }
+					// printf("\n\n");
 					SboxFonction(&juste,i/6);
-					printf("justsBox : ");
-					for(int z=0;z<4;z++){
-						printf("%d", juste.sbox4Bits[z]);
-					}
-					printf("\n");
+					// printf("justsBox : ");
+					// for(int z=0;z<4;z++){
+					// 	printf("%d", juste.sbox4Bits[z]);
+					// }
+					// printf("\n");
 					SboxFonction(&faux,i/6);
-					printf("fauxsBox : ");
-					for(int z=0;z<4;z++){
-						printf("%d", faux.sbox4Bits[z]);
-					}
-					printf("\n");
+					// printf("fauxsBox : ");
+					// for(int z=0;z<4;z++){
+					// 	printf("%d", faux.sbox4Bits[z]);
+					// }
+					// printf("\n");
 					xor(resSbox,juste.sbox4Bits,faux.sbox4Bits,4);
-					printf("xorsBox :  ");
-					for(int z=0;z<4;z++){
-						printf("%d", resSbox[z]);
-					}
-					printf("\n");
-					printf("leftJuste-1 : ");
-					for(int z=0;z<32;z++){
-						printf("%d", leftPmoin1[z]);
-					}
-					printf("\n");
-					printf("leftJuste-1/4bit : ");
-					for(int z=0;z<4;z++){
-						printf("%d", resLeftJuste[z]);
-					}
-					printf("\n");
+					// printf("xorsBox :  ");
+					// for(int z=0;z<4;z++){
+					// 	printf("%d", resSbox[z]);
+					// }
+					// printf("\n");
+					// printf("leftJuste-1 : ");
+					// for(int z=0;z<32;z++){
+					// 	printf("%d", leftPmoin1[z]);
+					// }
+					// printf("\n");
+					// printf("leftJuste-1/4bit : ");
+					// for(int z=0;z<4;z++){
+					// 	printf("%d", resLeftJuste[z]);
+					// }
+					// printf("\n");
 					if(egale(resLeftJuste,resSbox,4)) {
-						printf("ici cest bon \n");
 						resultat[i/6][TabtoInt(key,6)]++;
 					}
-					printf("\n\n\n");
+					//printf("\n\n\n");
 				}
 				
 			}
@@ -473,6 +497,76 @@ void initTab(int *tab, int nbrBit){
 	}
 }
 
+void shiftGauche(int *resultat, int *tabAshifter, int nbrShift, int nbrBit){
+	for(int i=-nbrShift; i<nbrBit-nbrShift; i++){
+		if(i<0) {
+			resultat[i+nbrBit] = tabAshifter[i+nbrShift];
+		} else {
+			resultat[i] = tabAshifter[i+nbrShift];	
+		}
+	}
+}
+
+void fusionTab(int *resultat, int *leftTab, int *rightTab, int nbrBit){
+	for(int i=0; i<nbrBit; i++){
+		resultat[i] = leftTab[i];
+		resultat[i+nbrBit] =rightTab[i];
+	}
+}
+
+void generationSubKey(int Les16SubKey[][48], int *key64Bit){
+	int v[16] = {1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1};
+	int key56bit[56] = {0};
+	int key48bit[48] = {0};
+	int tabSplit[2][28] = {0};
+	int tabSplitRes[2][28] = {0};
+	
+	Permutation(key56bit, key64Bit, pc1, 56);
+	
+	for(int i=0; i<16; i++) {
+		splitTab(key56bit,tabSplit[0],tabSplit[1], 28);
+		shiftGauche(tabSplitRes[0], tabSplit[0], v[i], 28);
+		shiftGauche(tabSplitRes[1], tabSplit[1], v[i], 28);
+		fusionTab(key56bit, tabSplitRes[0], tabSplitRes[1], 28);
+		Permutation(Les16SubKey[i], key56bit, pc2, 48);
+	}
+}
+
+void f(int *resultat, int *Ri, int *Ki){
+	int right48b[48] = {0};
+	int resultatXor[48] = {0};
+	int entrerSbox[6] = {0};
+	int sortiSbox[4] = {0};
+	int sorti32bit[32] = {0};
+	Permutation(right48b,Ri,e,48);
+	xor(resultatXor,right48b,Ki,48);
+	// for(int i=0;i<48;i++){
+	// 	printf("%d", resultatXor[i]);
+	// }
+	// printf("\n");
+	for(int j=0;j<8;j++){
+		for(int i=0; i<6; i++) {
+			entrerSbox[i] = resultatXor[6*j+i];
+			//printf("%d", entrerSbox[j][i]);
+		}
+		//printf("\n");
+		Sboxfonc(sortiSbox, entrerSbox, j);
+		for(int i=0;i<4;i++){
+			sorti32bit[j*4+i] = sortiSbox[i];
+		}
+	}
+	Permutation(resultat, sorti32bit, p, 32);
+}
+
+long fonctionDES(long claire, long k64){
+	DES d;
+	hexatobinary(d.claireBinaire, claire, 16);
+	hexatobinary(d.key64Bit, k64, 16);
+	Permutation(d.claireBinaireIp, d.claireBinaire, ip, 64);
+	splitTab(d.claireBinaireIp, d.left32Bit, d.right32Bit, 32);
+	generationSubKey(d.subKey, d.key64Bit);
+}
+
 void getK64bit(long k16){
 	Key k;
 	initTab(k.key48bit,48);
@@ -487,27 +581,21 @@ void getK64bit(long k16){
 		for(int j=0;j<8;j++){
 			k.key64bitb[position8bit[j]-1] = k.key8bit[j];
 		}
-		printf("%d : ", i);
-		for(int j=0;j<64;j++){
-			printf("%d",k.key64bitb[j]);
-		}
-		printf("\n");
+		// printf("%d : ", i);
+		// for(int j=0;j<64;j++){
+		// 	printf("%d",k.key64bitb[j]);
+		// }
+		// printf("\n");
 	}
 }
 
 
-long fonctionDES(long claire, long k64){
-	DES d;
-	hexatobinary(d.claireBinaire,claire,16);
-
-}
 
 int main(){
 // 
 	long onEstLa = rechercheExostive(chiffrerJuste,chiffrerFaux);
 	printf("la fin des temps : %lx\n", onEstLa); 
 	getK64bit(onEstLa);
-	
 
 	
 	return 0;
