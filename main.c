@@ -15,12 +15,19 @@ typedef struct message {
 } Message;
 
 typedef struct clef {
-	long k16;
 	int key48bit[48];
 	int key56bit[56];
 	int key64bitb[64];
 	int key8bit[8];
 } Key;
+
+typedef struct des {
+	long claire;
+	long k64;
+	int claireBinaire[64];
+	int claireBinaireIp[64];
+
+} DES;
 
 static const int ip[64] = {
 	58,50,42,34,26,18,10,2,
@@ -44,7 +51,7 @@ static const int e[48] = {
 	28,29,30,31,32,1
 };
 
-static const int pMois1[32] = {
+static const int pMoin1[32] = {
 	9,17,23,31,
 	13,28,2,18,
 	24,16,30,6,
@@ -139,7 +146,6 @@ static const int pc2[48] = {
 	46,42,50,36,29,32
 };
 
-//Les bits 9, 18, 22, 25, 35, 38, 43 et 54 sont perdus, ils sont donc mis à 0 dans cette table
 static const int pc2Moin1[56] = {
 	5,24,7,16,6,10,20,	
 	18,0,12,3,15,23,1,
@@ -249,17 +255,15 @@ long TabtoLong(int *tab,int nbrBit){
 	return nombre;
 }
 
-void Permutation(int *resultat,int *aPermuter, int nbrBit){
+void Permutation(int *resultat,int *aPermuter,const int *tablePermutation, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
-		resultat[i] = aPermuter[ip[i]-1];
+		if(tablePermutation[i] != 0){
+			resultat[i] = aPermuter[tablePermutation[i]-1];
+		}
 	}
 }
 
-void PermutationMoin1(int *resultat,int *aPermuter, int nbrBit){
-	for(int i=0;i<nbrBit;i++){
-		resultat[i] = aPermuter[pMois1[i]-1];
-	}
-}
+
 
 void split32bit(int *completTab,int *leftTab,int *rightTab){
 	for(int i=0;i<32;i++){
@@ -268,11 +272,7 @@ void split32bit(int *completTab,int *leftTab,int *rightTab){
 	}
 }
 
-void expansion(int *tabResultant,int *tabAvantExpansion){
-	for(int i=0;i<48;i++){
-		tabResultant[i] = tabAvantExpansion[e[i]-1];
-	}
-}
+
 
 void xor(int *tabResult, int *premierK, int *deuxiemeK, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
@@ -311,7 +311,7 @@ void SboxFonction(Message *m, int numSbox){
 void obtenirR16L16(long hexa,Message *m){
 	m->chiffrerHexa = hexa;
 	hexatobinary(m->chiffrerBinaire,hexa,16);
-	Permutation(m->chiffrerBinairePermuter, m->chiffrerBinaire, 64);
+	Permutation(m->chiffrerBinairePermuter, m->chiffrerBinaire, ip, 64);
 	split32bit(m->chiffrerBinairePermuter,m->leftChiffrer,m->rightChiffrer);
 	
 }
@@ -362,11 +362,11 @@ long rechercheExostive(const long LechiffrerJuste, const long *LeschiffrerFaux){
 	for(int w=0;w<32;w++){
 		obtenirR16L16(LeschiffrerFaux[w],&faux);
 		xor(resultatxorLeft,juste.leftChiffrer,faux.leftChiffrer,32);
-		PermutationMoin1(leftPmoin1, resultatxorLeft, 32);
+		Permutation(leftPmoin1, resultatxorLeft, pMoin1, 32);
 		int bitfaux = bitFauter(juste.rightChiffrer,faux.rightChiffrer);
 		printf("bit faux : %d\n", bitfaux);
-		expansion(juste.rightChiffrerExp,juste.rightChiffrer);
-		expansion(faux.rightChiffrerExp,faux.rightChiffrer);
+		Permutation(juste.rightChiffrerExp,juste.rightChiffrer,e,48);
+		Permutation(faux.rightChiffrerExp,faux.rightChiffrer,e,48);
 		int resSbox[4] = {0};
 		int resLeftJuste[4] = {0};
 		int key[6] = {0};
@@ -473,23 +473,14 @@ void initTab(int *tab, int nbrBit){
 	}
 }
 
-void expansionClef(int *resultat, int *key48b, const int *fctExtansion, int nbrBit){
-	for(int i=0;i<nbrBit;i++){
-		if(fctExtansion[i] != 0){
-			resultat[i] = key48b[fctExtansion[i]-1];
-		}	
-	}
-}
-
 void getK64bit(long k16){
 	Key k;
-	k.k16 = k16;
 	initTab(k.key48bit,48);
 	initTab(k.key56bit,56);
 	initTab(k.key64bitb,64);
 	hexatobinary(k.key48bit,k16,12);
-	expansionClef(k.key56bit, k.key48bit, pc2Moin1, 56);
-	expansionClef(k.key64bitb, k.key56bit, pc1Moin1, 64);
+	Permutation(k.key56bit, k.key48bit, pc2Moin1, 56);
+	Permutation(k.key64bitb, k.key56bit, pc1Moin1, 64);
 	int position8bit[8] = {14,15,19,20,51,54,58,60};
 	for(int i=0;i<256;i++) {
 		decimaltobinary(k.key8bit,i,8);
@@ -502,6 +493,13 @@ void getK64bit(long k16){
 		}
 		printf("\n");
 	}
+}
+
+
+long fonctionDES(long claire, long k64){
+	DES d;
+	hexatobinary(d.claireBinaire,claire,16);
+
 }
 
 int main(){
