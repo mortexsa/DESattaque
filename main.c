@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+//Cette structure est utiler dans la recherche de K16
 typedef struct message {
 	long chiffrerHexa;
 	int chiffrerBinaire[64];
@@ -14,6 +15,7 @@ typedef struct message {
 	int sbox4Bits[4]; 
 } Message;
 
+//Cette structure est utiliser dans les recherche des 16 sous clefs
 typedef struct clef {
 	int key48bit[48];
 	int key56bit[56];
@@ -21,6 +23,8 @@ typedef struct clef {
 	int key8bit[8];
 } Key;
 
+//Cette structure est utiliser dans le DES, 
+//elle regroupe toute les variables necessaire au bon deroulement du DES
 typedef struct des {
 	int claireBinaire[64];
 	int key64Bit[64];
@@ -34,6 +38,7 @@ typedef struct des {
 	int chiffrerBinaire[64];
 } DES;
 
+//Initial permutation
 static const int ip[64] = {
 	58,50,42,34,26,18,10,2,
 	60,52,44,36,28,20,12,4,
@@ -45,6 +50,7 @@ static const int ip[64] = {
 	63,55,47,39,31,23,15,7
 };
 
+//L'inverse de l'initial permutation
 static const int ipMoin1[64] = {
 	40,8,48,16,56,24,64,32,
 	39,7,47,15,55,23,63,31,
@@ -56,6 +62,7 @@ static const int ipMoin1[64] = {
 	33,1,41,9,49,17,57,25
 };
 
+//Expansion
 static const int e[48] = {
 	32,1,2,3,4,5,
 	4,5,6,7,8,9,
@@ -67,6 +74,7 @@ static const int e[48] = {
 	28,29,30,31,32,1
 };
 
+//permutation dans la fonction interne f
 static const int p[32] = {
 	16,7,20,21,29,12,28,17,
 	1,15,23,26,5,18,31,10,
@@ -74,6 +82,7 @@ static const int p[32] = {
 	19,13,30,6,22,11,4,25
 };
 
+//permutation inverse dans la fonction interne f
 static const int pMoin1[32] = {
 	9,17,23,31,
 	13,28,2,18,
@@ -85,6 +94,7 @@ static const int pMoin1[32] = {
 	5,27,15,21
 };
 
+//Les 8 S-box contenu dans la fonction f
 static const int sbox[8][4][16] = {
 	{
 		{14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7},
@@ -136,6 +146,7 @@ static const int sbox[8][4][16] = {
 	}
 };
 
+//permutation 1 dans le key schedul
 static const int pc1[56] = {
 	57,49,41,33,25,17,9,
 	1,58,50,42,34,26,18,
@@ -147,6 +158,7 @@ static const int pc1[56] = {
 	21,13,5,28,20,12,4
 };
 
+//permutation 1 inverse dans le key schedul
 static const int pc1Moin1[64] = {
 	8,16,24,56,52,44,36,0,
 	7,15,23,55,51,43,35,0,	
@@ -158,6 +170,7 @@ static const int pc1Moin1[64] = {
 	1,9,17,25,45,37,29,0
 };
 
+//permutation 2 dans le key schedul qui fait passer la clef de 56 a 48 bits
 static const int pc2[48] = {
 	14,17,11,24,1,5,
 	3,28,15,6,21,10,
@@ -169,6 +182,7 @@ static const int pc2[48] = {
 	46,42,50,36,29,32
 };
 
+//permutation 2 inverse dans le key schedul
 static const int pc2Moin1[56] = {
 	5,24,7,16,6,10,20,	
 	18,0,12,3,15,23,1,
@@ -180,84 +194,47 @@ static const int pc2Moin1[56] = {
 	45,33,26,42,0,30,40
 };
 
-static const long messageClaire = 0xE34026863EA1A743;
 
-static const long chiffrerJuste = 0xFC754C3C4D21BC3A;
+static const long messageClaire = 0x40A7D989161A6223;
+
+static const long chiffrerJuste = 0x864C804BB6B905BA;
 
 static const long chiffrerFaux[32] = {
-	0xFE644C784D21BC3E, 
-	0xFC774C784D21BC3A, 
-	0xFC654E784D20BC3A, 
-	0xFC25487E5D20BC3A, 
-	0xFD2548785F20BC3A, 
-	0xFD75483C4D23BC3A, 
-	0xFC35483C4D21BE3A, 
-	0xFC35483D1D31BC38, 
-	0xF435483D4D25BC3A, 
-	0xFC7D4C3D4D31BC3A, 
-	0xFC75443D0D21BC3A, 
-	0xBC754C340D65BC3A, 
-	0xBC754C3D4525BC3B, 
-	0xBC755C3C4D69BC3B, 
-	0xBC754C3C4D61B43A, 
-	0xBC755C3C4921BC73, 
-	0x9C755C3C4D61AD3A, 
-	0xFC554C3C4921AC3A, 
-	0xFC756C3C4921BD7A, 
-	0xEC754D1C4D21BD7A, 
-	0xEC750D3C6921AC7A, 
-	0xE8750D3C4D01BC3A, 
-	0xF8750C3C4D219C3A, 
-	0xEC750C2C4D21FC1A, 
-	0x68754C2C4D21FC3A, 
-	0xFCF54C2C4C21FC3A, 
-	0xFC75CC2C4D21B83A, 
-	0xFC744CAC4C21B82E, 
-	0xFC744C2CCD21F83E, 
-	0xFC744C3C4DA1BC2A, 
-	0xFC704C3C4D213C3E, 
-	0xFC744C384D20BCAE 
+	0x8448800BB6B805BE, 
+	0x865E804BB6B805BA, 
+	0x864C824FB6B805BA, 
+	0x861C8409A6B905BA, 
+	0x860C804FA4B805BA, 
+	0x860C844BB6BB05BA, 
+	0x870C844BA6B907BA, 
+	0x864C844AE6B905B8, 
+	0x8F0C804AA6AD05BA, 
+	0x8644804AF6AD05BA, 
+	0x864C884BF6A905BA, 
+	0xC64C9042F6A905BA, 
+	0xC64C804AFEAD05BB, 
+	0xC64C804BB6F105BA, 
+	0x864C804BB6F90DBB, 
+	0xC64C904BB6B904F3, 
+	0xE64C804BB2B904FB, 
+	0x866C804BB2B915FA, 
+	0x864CA04BB6B914BA, 
+	0x964CC16BB2B915BA, 
+	0x824CC04B96B914FA, 
+	0x924C814BB69905BA, 
+	0x864CC14BB6B925BA, 
+	0x964CC15BB6B9459A, 
+	0x024CC05BB7B905BA, 
+	0x86CC804BB7B901BA, 
+	0x864C005BB6B945BA, 
+	0x864880DBB7B901AA, 
+	0x8648804B37B901AA, 
+	0x8648804BB63905AE, 
+	0x864D804BB6B985BE, 
+	0x864C800BB6B8052E 
 };
 
-// static const long messageClaire = 0x40A7D989161A6223;
-
-// static const long chiffrerJuste = 0x864C804BB6B905BA;
-
-// static const long chiffrerFaux[32] = {
-// 	0x8448800BB6B805BE, 
-// 	0x865E804BB6B805BA, 
-// 	0x864C824FB6B805BA, 
-// 	0x861C8409A6B905BA, 
-// 	0x860C804FA4B805BA, 
-// 	0x860C844BB6BB05BA, 
-// 	0x870C844BA6B907BA, 
-// 	0x864C844AE6B905B8, 
-// 	0x8F0C804AA6AD05BA, 
-// 	0x8644804AF6AD05BA, 
-// 	0x864C884BF6A905BA, 
-// 	0xC64C9042F6A905BA, 
-// 	0xC64C804AFEAD05BB, 
-// 	0xC64C804BB6F105BA, 
-// 	0x864C804BB6F90DBB, 
-// 	0xC64C904BB6B904F3, 
-// 	0xE64C804BB2B904FB, 
-// 	0x866C804BB2B915FA, 
-// 	0x864CA04BB6B914BA, 
-// 	0x964CC16BB2B915BA, 
-// 	0x824CC04B96B914FA, 
-// 	0x924C814BB69905BA, 
-// 	0x864CC14BB6B925BA, 
-// 	0x964CC15BB6B9459A, 
-// 	0x024CC05BB7B905BA, 
-// 	0x86CC804BB7B901BA, 
-// 	0x864C005BB6B945BA, 
-// 	0x864880DBB7B901AA, 
-// 	0x8648804B37B901AA, 
-// 	0x8648804BB63905AE, 
-// 	0x864D804BB6B985BE, 
-// 	0x864C800BB6B8052E 
-// };
-
+//passer d'un long en hexa en un tableau de bit
 void hexatobinary(int *tabResult, long hexa, int nbrHexa){
 	long tmp = hexa;
 	int entier;
@@ -274,6 +251,7 @@ void hexatobinary(int *tabResult, long hexa, int nbrHexa){
 
 }
 
+//transformer un entier en un tableau de bit
 void decimaltobinary(int *tabResult, int decimal, int nbrBit){
 	int entier = decimal;
 	for(int i=nbrBit-1; i>=0; i--){
@@ -282,6 +260,7 @@ void decimaltobinary(int *tabResult, int decimal, int nbrBit){
 	}
 }
 
+//élevé a la puissance
 long puissance(int a,int b){
 	if(b == 0){
 		return 1;
@@ -290,6 +269,7 @@ long puissance(int a,int b){
 	}
 }
 
+//transformer un tableau de bit en un entier
 int TabtoInt(int *tab,int nbrBit){	
 	int nombre=0;
 	int i=0,j=nbrBit-1;
@@ -303,6 +283,7 @@ int TabtoInt(int *tab,int nbrBit){
 	return nombre;
 }
 
+//transformer un tableau de bit en un hexadecimal
 long TabtoLong(int *tab,int nbrBit){	
 	long nombre=0;
 	int i=0,j=nbrBit-1;
@@ -316,6 +297,7 @@ long TabtoLong(int *tab,int nbrBit){
 	return nombre;
 }
 
+//gere toute les permutation y compris l'expension
 void Permutation(int *resultat,int *aPermuter,const int *tablePermutation, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
 		if(tablePermutation[i] != 0){
@@ -324,8 +306,7 @@ void Permutation(int *resultat,int *aPermuter,const int *tablePermutation, int n
 	}
 }
 
-
-
+//divise un tableau de bit en 2 tableau de meme longueur
 void splitTab(int *completTab,int *leftTab,int *rightTab, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
 		leftTab[i] = completTab[i];
@@ -333,14 +314,14 @@ void splitTab(int *completTab,int *leftTab,int *rightTab, int nbrBit){
 	}
 }
 
-
-
+//applique un XOR entre 2 tableau de bit
 void xor(int *tabResult, int *premierK, int *deuxiemeK, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
 		tabResult[i] = premierK[i] ^ deuxiemeK[i];
 	}
 }
 
+//trouve la position du bit fauter
 int bitFauter(int *tabJuste, int *tabFaux) {
 	int tabxor[33] = {0};
 	xor(tabxor, tabJuste, tabFaux, 32);
@@ -352,6 +333,7 @@ int bitFauter(int *tabJuste, int *tabFaux) {
 	return -1;
 }
 
+//la boite de substitution qui transforme 6 bit en 4 bit selon la S-box choisi
 void Sboxfonc(int *resultat, int *entrer, int numSbox){
 	int row = 0;
 	int column = 0;
@@ -368,6 +350,7 @@ void Sboxfonc(int *resultat, int *entrer, int numSbox){
 	hexatobinary(resultat, resultat4bit,1);
 }
 
+//s'occupe de retrouver le L16 et le L16 fauter
 void obtenirR16L16(long hexa,Message *m){
 	m->chiffrerHexa = hexa;
 	hexatobinary(m->chiffrerBinaire,hexa,16);
@@ -376,12 +359,14 @@ void obtenirR16L16(long hexa,Message *m){
 	
 }
 
+//On extrer 6 bit une position bien defini au niveau des S-box
 void extraire6Bits(Message *m, int position) {
 	for(int i=0; i<6; i++) {
 		m->sbox6Bits[i] = m->rightChiffrerExp[6*position+i];
 	}
 }
 
+//Compare deux tableau de meme taille
 int egale(int *tab1, int *tab2, int nbrBit){
 	for(int i=0; i<nbrBit; i++){
 		if(tab1[i] != tab2[i])
@@ -390,7 +375,7 @@ int egale(int *tab1, int *tab2, int nbrBit){
 	return 1;
 }
 
-
+//Cette fonction traite les resultat de la recherche exhaustive pour trouver le bon K16
 long k16enHexa(int tabK16[8][64]){
 	long resultat = 0;
 	int tab[8] = {0};
@@ -411,6 +396,7 @@ long k16enHexa(int tabK16[8][64]){
 	return resultat;
 }
 
+//Fait la recherche exhaustive pour trouver la clef K15
 long rechercheExostive(const long LechiffrerJuste, const long *LeschiffrerFaux){
 	Message juste;
 	Message faux;
@@ -456,12 +442,14 @@ long rechercheExostive(const long LechiffrerJuste, const long *LeschiffrerFaux){
 	return aRetourner;
 }
 
+//initiatilse le tableau de bit a 0
 void initTab(int *tab, int nbrBit){
 	for(int i=0;i<nbrBit;i++){
 		tab[i] = 0;
 	}
 }
 
+//S'occupe de shifter les bit de nbrShift fois vers la gauche
 void shiftGauche(int *resultat, int *tabAshifter, int nbrShift, int nbrBit){
 	for(int i=-nbrShift; i<nbrBit-nbrShift; i++){
 		if(i<0) {
@@ -472,6 +460,7 @@ void shiftGauche(int *resultat, int *tabAshifter, int nbrShift, int nbrBit){
 	}
 }
 
+//On fusionne deux tableau de meme dimension
 void fusionTab(int *resultat, int *leftTab, int *rightTab, int nbrBit){
 	for(int i=0; i<nbrBit; i++){
 		resultat[i] = leftTab[i];
@@ -479,6 +468,7 @@ void fusionTab(int *resultat, int *leftTab, int *rightTab, int nbrBit){
 	}
 }
 
+//Genere les 16 clef de K0 a K15 dans le DES
 void generationSubKey(int Les16SubKey[][48], int *key64Bit){
 	int v[16] = {1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1};
 	int key56bit[56] = {0};
@@ -495,6 +485,7 @@ void generationSubKey(int Les16SubKey[][48], int *key64Bit){
 	}
 }
 
+//Fonction interne F du DES
 void f(int *resultat, int *Ri, int *Ki){
 	int right48b[48] = {0};
 	int resultatXor[48] = {0};
@@ -515,12 +506,14 @@ void f(int *resultat, int *Ri, int *Ki){
 	Permutation(resultat, sorti32bit, p, 32);
 }
 
+//Sert a copier un tableau dans un autre de meme dimension
 void copieTab(int *resultat, int * aCopier, int nbrBit){
 	for(int i=0; i<nbrBit; i++){
 		resultat[i] = aCopier[i];
 	}
 }
 
+//DES : Prend en entrer un message claire et une clef pour donner un message chiffrer
 long fonctionDES(long claire, long k64){
 	DES d;
 	int resultatF[32] = {0};
@@ -542,6 +535,8 @@ long fonctionDES(long claire, long k64){
 	return TabtoLong(d.chiffrerBinaire,64);
 }
 
+//Sert a obtenir les 56 bit juste de la clef de chiffrement
+//(il restera que les bit de parité a trouver)
 long getK56bit(long claire, long chiffrer, long k16){
 	Key k;
 	initTab(k.key48bit,48);
@@ -566,6 +561,7 @@ long getK56bit(long claire, long chiffrer, long k16){
 	return 0;
 }
 
+//Renvoi la clef de chiffrement complete de 64 bits
 long getK64bitParite(long claire, long chiffrer, long k16){
 	int compteur = 0;
 	int tabClefB[64] = {0};
@@ -599,9 +595,9 @@ long getK64bitParite(long claire, long chiffrer, long k16){
 
 int main(){
 
-	long onEstLa = rechercheExostive(chiffrerJuste,chiffrerFaux);
-	printf("la fin des temps : %lx\n", onEstLa); 
-	printf("Clef : %lx\n", getK64bitParite(messageClaire, chiffrerJuste, onEstLa));
+	long K_16 = rechercheExostive(chiffrerJuste,chiffrerFaux);
+	printf("la fin des temps : %lx\n", K_16); 
+	printf("Clef : %lx\n", getK64bitParite(messageClaire, chiffrerJuste, K_16));
 		
 	return 0;
 }
